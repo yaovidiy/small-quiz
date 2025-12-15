@@ -5,19 +5,54 @@
 	let { data }: { data: PageData } = $props();
 
 	let editingQuiz = $state(false);
-	let quizTitle = $state(data.quiz.title);
-	let quizDescription = $state(data.quiz.description || '');
+	let quizTitle = $derived(data.quiz.title);
+	let quizDescription = $derived(data.quiz.description || '');
 
 	let expandedQuestion: string | null = $state(null);
 	let newQuestionText = $state('');
 	let newQuestionType = $state('multiple-choice');
 	let showNewQuestionForm = $state(false);
+	let previousQuestionsCount = $derived(data.questions.length);
 
 	let newAnswerText: Record<string, string> = $state({});
 	let newAnswerIsCorrect: Record<string, boolean> = $state({});
 	let showNewAnswerForm: Record<string, boolean> = $state({});
+	let previousTotalAnswers = $state(0);
 
 	const questionTypes = ['multiple-choice', 'true-false', 'short-answer'];
+
+	// Calculate total answers across all questions
+	const getTotalAnswers = () => {
+		return data.questions.reduce((sum, q) => sum + q.answers.length, 0);
+	};
+
+	// Auto-expand newly created questions and reset forms
+	$effect(() => {
+		const currentTotalAnswers = getTotalAnswers();
+		
+		// Check if a new question was created
+		if (data.questions.length > previousQuestionsCount) {
+			const newQuestion = data.questions[data.questions.length - 1];
+			expandedQuestion = newQuestion.id;
+			showNewAnswerForm[newQuestion.id] = true;
+			previousQuestionsCount = data.questions.length;
+			// Reset form
+			newQuestionText = '';
+			newQuestionType = 'multiple-choice';
+			showNewQuestionForm = false;
+		}
+		
+		// Check if a new answer was created
+		if (currentTotalAnswers > previousTotalAnswers) {
+			// Reset all answer forms
+			Object.keys(showNewAnswerForm).forEach(questionId => {
+				newAnswerText[questionId] = '';
+				newAnswerIsCorrect[questionId] = false;
+				showNewAnswerForm[questionId] = false;
+			});
+			previousTotalAnswers = currentTotalAnswers;
+		}
+	});
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -162,11 +197,6 @@
 							<button
 								type="submit"
 								class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition duration-200"
-								onclick={() => {
-									newQuestionText = '';
-									newQuestionType = 'multiple-choice';
-									showNewQuestionForm = false;
-								}}
 							>
 								Create Question
 							</button>
@@ -326,11 +356,6 @@
 														<button
 															type="submit"
 															class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded transition duration-200"
-															onclick={() => {
-																showNewAnswerForm[question.id] = false;
-																newAnswerText[question.id] = '';
-																newAnswerIsCorrect[question.id] = false;
-															}}
 														>
 															Add Answer
 														</button>
