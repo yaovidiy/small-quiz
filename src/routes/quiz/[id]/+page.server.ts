@@ -5,6 +5,16 @@ import { eq, and } from 'drizzle-orm';
 import { encodeBase32LowerCase } from '@oslojs/encoding';
 import type { PageServerLoad, Actions } from './$types';
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+	const shuffled = [...array];
+	for (let i = shuffled.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+	}
+	return shuffled;
+};
+
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) {
 		return redirect(302, '/login');
@@ -37,7 +47,7 @@ export const load: PageServerLoad = async (event) => {
 		.where(eq(table.question.quizId, quizId))
 		.orderBy(table.question.order);
 
-	// Fetch answers for each question
+	// Fetch answers for each question and shuffle them
 	const questionsWithAnswers = await Promise.all(
 		questions.map(async (question) => {
 			const answers = await db
@@ -48,7 +58,7 @@ export const load: PageServerLoad = async (event) => {
 
 			return {
 				...question,
-				answers
+				answers: shuffleArray(answers)
 			};
 		})
 	);

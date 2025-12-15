@@ -9,8 +9,8 @@
 	let answers = $state<Record<string, string>>({});
 	let isSubmitted = $state(false);
 
-	const currentQuestion = data.questions[currentQuestionIndex];
-	const progress = ((currentQuestionIndex + 1) / data.questions.length) * 100;
+	const currentQuestion = $derived(data.questions[currentQuestionIndex]);
+	const progress = $derived(((currentQuestionIndex + 1) / data.questions.length) * 100);
 
 	const handleAnswerChange = (questionId: string, answerId: string) => {
 		answers[questionId] = answerId;
@@ -32,7 +32,7 @@
 		isSubmitted = true;
 	};
 
-	const allAnswered = data.questions.every((q) => answers[q.id]);
+	const allAnswered = $derived(data.questions.every((q) => answers[q.id]));
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -69,6 +69,7 @@
 				</div>
 			</div>
 
+            {#key currentQuestion.id}
 			<!-- Question Card -->
 			<div class="bg-white rounded-lg shadow-lg p-6 sm:p-8 mb-8">
 				<h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6">
@@ -78,7 +79,7 @@
 				<!-- Answer Options -->
 				{#if currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'true-false'}
 					<div class="space-y-4">
-						{#each currentQuestion.answers as answer (answer.id)}
+					{#each currentQuestion.answers as answer (answer.id)}
 							<label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 transition" class:border-indigo-500={answers[currentQuestion.id] === answer.id} class:bg-indigo-50={answers[currentQuestion.id] === answer.id}>
 								<input
 									type="radio"
@@ -102,6 +103,7 @@
 					/>
 				{/if}
 			</div>
+            {/key}
 
 			<!-- Navigation Buttons -->
 			<div class="flex gap-3 flex-col sm:flex-row">
@@ -141,11 +143,10 @@
 							onclick={() => (currentQuestionIndex = index)}
 							class="aspect-square rounded-lg font-semibold text-xs transition hover:scale-110"
 							class:bg-green-500={answers[question.id]}
-							class:text-white={answers[question.id]}
-							class:bg-gray-200={!answers[question.id]}
-							class:bg-indigo-600={currentQuestionIndex === index && answers[question.id]}
-							class:bg-indigo-400={currentQuestionIndex === index && !answers[question.id]}
-							class:text-white={currentQuestionIndex === index}
+						class:text-white={answers[question.id] || currentQuestionIndex === index}
+						class:bg-gray-200={!answers[question.id]}
+						class:bg-indigo-600={currentQuestionIndex === index && answers[question.id]}
+						class:bg-indigo-400={currentQuestionIndex === index && !answers[question.id]}
 						>
 							{index + 1}
 						</button>
@@ -154,7 +155,7 @@
 			</div>
 		{:else}
 			<!-- Submit Form -->
-			<form method="POST" action="?/submit" use:enhance class="hidden">
+			<form method="POST" action="?/submit" use:enhance id="submitForm" class="hidden">
 				<input type="hidden" name="quizId" value={data.quiz.id} />
 				{#each Object.entries(answers) as [questionId, answerId]}
 					<input type="hidden" name="answers" value={`${questionId}:${answerId}`} />
@@ -176,20 +177,12 @@
 				</p>
 
 				<button
-					formaction="?/submit"
 					form="submitForm"
 					type="submit"
 					class="inline-block px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition duration-200 text-sm sm:text-base"
 				>
 					View Results
 				</button>
-
-				<form method="POST" action="?/submit" use:enhance id="submitForm" class="hidden">
-					<input type="hidden" name="quizId" value={data.quiz.id} />
-					{#each Object.entries(answers) as [questionId, answerId]}
-						<input type="hidden" name="answers" value={`${questionId}:${answerId}`} />
-					{/each}
-				</form>
 			</div>
 		{/if}
 	</main>

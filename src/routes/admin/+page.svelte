@@ -27,7 +27,7 @@
 	<!-- Main Content -->
 	<main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
 		<!-- Navigation Cards -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
 			<!-- User-Quiz Assignment -->
 			<div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 sm:p-8 text-white hover:shadow-xl transition">
 				<h2 class="text-2xl font-bold mb-2">Assign Quizzes</h2>
@@ -49,6 +49,18 @@
 					class="inline-block px-6 py-2 bg-white hover:bg-gray-100 text-green-600 font-semibold rounded-lg transition duration-200"
 				>
 					Go to Quiz Manager
+				</a>
+			</div>
+
+			<!-- Results -->
+			<div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 sm:p-8 text-white hover:shadow-xl transition">
+				<h2 class="text-2xl font-bold mb-2">View Results</h2>
+				<p class="mb-6 opacity-90">View all quiz results from all users</p>
+				<a
+					href="/admin/results"
+					class="inline-block px-6 py-2 bg-white hover:bg-gray-100 text-purple-600 font-semibold rounded-lg transition duration-200"
+				>
+					See All Results
 				</a>
 			</div>
 		</div>
