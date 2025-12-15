@@ -6,14 +6,38 @@
 	let { data }: { data: PageData } = $props();
 
 	let currentQuestionIndex = $state(0);
-	let answers = $state<Record<string, string>>({});
+	let answers = $state<Record<string, string | string[]>>({});
 	let isSubmitted = $state(false);
 
 	const currentQuestion = $derived(data.questions[currentQuestionIndex]);
 	const progress = $derived(((currentQuestionIndex + 1) / data.questions.length) * 100);
 
-	const handleAnswerChange = (questionId: string, answerId: string) => {
-		answers[questionId] = answerId;
+	// Check if question has multiple correct answers
+	const hasMultipleCorrectAnswers = $derived(
+		currentQuestion.answers.filter((a) => a.isCorrect).length > 1
+	);
+
+	const handleAnswerChange = (questionId: string, answerId: string, isCheckbox: boolean) => {
+		if (isCheckbox) {
+			// Handle checkbox (multiple selection)
+			const currentAnswers = Array.isArray(answers[questionId]) ? answers[questionId] : [];
+			if (currentAnswers.includes(answerId)) {
+				answers[questionId] = (currentAnswers as string[]).filter((id) => id !== answerId);
+			} else {
+				answers[questionId] = [...currentAnswers, answerId];
+			}
+		} else {
+			// Handle radio button (single selection)
+			answers[questionId] = answerId;
+		}
+	};
+
+	const isAnswerSelected = (questionId: string, answerId: string) => {
+		const answer = answers[questionId];
+		if (Array.isArray(answer)) {
+			return answer.includes(answerId);
+		}
+		return answer === answerId;
 	};
 
 	const handleNext = () => {
@@ -32,7 +56,13 @@
 		isSubmitted = true;
 	};
 
-	const allAnswered = $derived(data.questions.every((q) => answers[q.id]));
+	const allAnswered = $derived(data.questions.every((q) => {
+		const answer = answers[q.id];
+		if (Array.isArray(answer)) {
+			return answer.length > 0;
+		}
+		return answer;
+	}));
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -80,13 +110,13 @@
 				{#if currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'true-false'}
 					<div class="space-y-4">
 					{#each currentQuestion.answers as answer (answer.id)}
-							<label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 transition" class:border-indigo-500={answers[currentQuestion.id] === answer.id} class:bg-indigo-50={answers[currentQuestion.id] === answer.id}>
-								<input
-									type="radio"
-									name={`question-${currentQuestion.id}`}
-									value={answer.id}
-									checked={answers[currentQuestion.id] === answer.id}
-									onchange={() => handleAnswerChange(currentQuestion.id, answer.id)}
+						<label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 transition" class:border-indigo-500={isAnswerSelected(currentQuestion.id, answer.id)} class:bg-indigo-50={isAnswerSelected(currentQuestion.id, answer.id)}>
+							<input
+								type={hasMultipleCorrectAnswers ? 'checkbox' : 'radio'}
+								name={`question-${currentQuestion.id}`}
+								value={answer.id}
+								checked={isAnswerSelected(currentQuestion.id, answer.id)}
+								onchange={() => handleAnswerChange(currentQuestion.id, answer.id, hasMultipleCorrectAnswers)}
 									class="w-4 h-4 text-indigo-600 cursor-pointer"
 								/>
 								<span class="ml-3 text-gray-800 font-medium text-sm sm:text-base">{answer.text}</span>
@@ -157,8 +187,14 @@
 			<!-- Submit Form -->
 			<form method="POST" action="?/submit" use:enhance id="submitForm" class="hidden">
 				<input type="hidden" name="quizId" value={data.quiz.id} />
-				{#each Object.entries(answers) as [questionId, answerId]}
-					<input type="hidden" name="answers" value={`${questionId}:${answerId}`} />
+				{#each Object.entries(answers) as [questionId, answerIdOrIds]}
+					{#if Array.isArray(answerIdOrIds)}
+						{#each answerIdOrIds as answerId}
+							<input type="hidden" name="answers" value={`${questionId}:${answerId}`} />
+						{/each}
+					{:else}
+						<input type="hidden" name="answers" value={`${questionId}:${answerIdOrIds}`} />
+					{/if}
 				{/each}
 			</form>
 
