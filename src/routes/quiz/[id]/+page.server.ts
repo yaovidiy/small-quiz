@@ -89,11 +89,14 @@ export const actions: Actions = {
 			return redirect(302, '/');
 		}
 
-		// Parse answers
-		const userAnswers: Record<string, string> = {};
+		// Parse answers - support multiple answers per question
+		const userAnswers: Record<string, string[]> = {};
 		answersRaw.forEach((answer) => {
 			const [questionId, answerId] = answer.split(':');
-			userAnswers[questionId] = answerId;
+			if (!userAnswers[questionId]) {
+				userAnswers[questionId] = [];
+			}
+			userAnswers[questionId].push(answerId);
 		});
 
 		// Get all questions and answers to calculate score
@@ -114,29 +117,38 @@ export const actions: Actions = {
 
 		// Store user answers and calculate score
 		for (const question of questions) {
-			const userAnswerId = userAnswers[question.id];
+			const userAnswerIds = userAnswers[question.id];
 
-			if (userAnswerId) {
+			if (userAnswerIds && userAnswerIds.length > 0) {
 				const answers = await db
 					.select()
 					.from(table.answer)
 					.where(eq(table.answer.questionId, question.id));
 
-				const selectedAnswer = answers.find((a) => a.id === userAnswerId);
+				// Get all correct answer IDs for this question
+				const correctAnswerIds = new Set(answers.filter((a) => a.isCorrect).map((a) => a.id));
 
-				// Record user answer
-				const userAnswerRecord = {
-					id: encodeBase32LowerCase(crypto.getRandomValues(new Uint8Array(15))),
-					resultId,
-					questionId: question.id,
-					answerId: userAnswerId,
-					userText: null
-				};
+				// Check if user's answers match the correct answers
+				const userAnswerIdSet = new Set(userAnswerIds);
+				const isCorrect = 
+					userAnswerIdSet.size === correctAnswerIds.size &&
+					Array.from(userAnswerIdSet).every((id) => correctAnswerIds.has(id));
 
-				await db.insert(table.userAnswer).values(userAnswerRecord);
+				// Record each user answer
+				for (const answerId of userAnswerIds) {
+					const userAnswerRecord = {
+						id: encodeBase32LowerCase(crypto.getRandomValues(new Uint8Array(15))),
+						resultId,
+						questionId: question.id,
+						answerId: answerId,
+						userText: null
+					};
 
-				// Check if correct
-				if (selectedAnswer?.isCorrect) {
+					await db.insert(table.userAnswer).values(userAnswerRecord);
+				}
+
+				// Check if correct and increment score
+				if (isCorrect) {
 					score++;
 				}
 			}
