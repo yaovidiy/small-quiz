@@ -54,6 +54,10 @@
 
 	const handleSubmit = () => {
 		isSubmitted = true;
+		const form = document.getElementById('submitForm') as HTMLFormElement;
+		if (form) {
+			form.submit();
+		}
 	};
 
 	const allAnswered = $derived(data.questions.every((q) => {
